@@ -74,35 +74,28 @@ class FieldProxy:
             raise AttributeError(f"'{self.field_name}' has no attributes. Remove '.{attr}'")
 
 
-    def __eq__(self, other: Any) -> "ModelProxy":
+    def __eq__(self, other: Any):
         self.model._register_condition((self.field_path, "=", other))
-        return self.model
-
-    def __ne__(self, other: Any) -> "ModelProxy":
+        
+    def __ne__(self, other: Any):
         self.model._register_condition((self.field_path, "!=", other))
-        return self.model
 
-    def __contains__(self, other: Any) -> "ModelProxy":
+    def __contains__(self, other: Any):
         operator = "ilike" if isinstance(other, str) else "in"
         value = other if isinstance(other, str) else ([other] if not isinstance(other, list) else other)
         self.model._register_condition((self.field_path, operator, value))
-        return self.model
 
-    def __lt__(self, other: Any) -> "ModelProxy":
+    def __lt__(self, other: Any):
         self.model._register_condition((self.field_path, "<", other))
-        return self.model
 
-    def __le__(self, other: Any) -> "ModelProxy":
+    def __le__(self, other: Any):
         self.model._register_condition((self.field_path, "<=", other))
-        return self.model
 
-    def __gt__(self, other: Any) -> "ModelProxy":
+    def __gt__(self, other: Any):
         self.model._register_condition((self.field_path, ">", other))
-        return self.model
 
-    def __ge__(self, other: Any) -> "ModelProxy":
+    def __ge__(self, other: Any):
         self.model._register_condition((self.field_path, ">=", other))
-        return self.model
 
 
 class ModelProxy:
