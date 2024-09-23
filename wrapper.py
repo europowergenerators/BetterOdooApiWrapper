@@ -49,9 +49,9 @@ class FieldProxy:
             if not relation:
                 raise AttributeError(f"'{self.field_name}' has no relation. This indicates an issue with your odoo database, contact your odoo administrator.")
 
-            related_fields = self.model.query.orm.fields_cache.setdefault(
-                relation, self.model.query.orm._introspect_fields(relation)
-            )
+            if relation not in self.model.query.orm.fields_cache:
+                self.model.query.orm.fields_cache[relation] = self.model.query.orm._introspect_fields(relation)
+            related_fields = self.model.query.orm.fields_cache[relation]
 
             # Allow 'id' and 'external_id' even if they are not in related_fields
             if attr not in related_fields and attr not in {"id", "external_id"}:
@@ -99,18 +99,16 @@ class FieldProxy:
 
 
 class ModelProxy:
-    def __init__(self, fields: Dict, query: "OdooQuery", collect_accesses: bool = False):
+    def __init__(self, fields: Dict, query: "OdooQuery"):
         self.fields = fields
         self.query = query
         self.conditions = []
         self.accesses = []
-        self.collect_accesses = collect_accesses
 
     def __getattr__(self, item: str) -> FieldProxy:
         """Handle attribute access to dynamically return a FieldProxy."""
         if item in self.fields or item in {"id", "external_id"}:
-            if self.collect_accesses:
-                self.accesses.append(item)
+            self.accesses.append(item)
 
             return FieldProxy(
                 field_name=item,
@@ -148,7 +146,8 @@ class Client:
         return self.common_proxy.authenticate(self.db, self.username, self.password, {})
 
     def __getitem__(self, model_name: str) -> "OdooQuery":
-        self.fields_cache.setdefault(model_name, self._introspect_fields(model_name))
+        if model_name not in self.fields_cache:
+            self.fields_cache[model_name] = self._introspect_fields(model_name)
         return OdooQuery(self, model_name)
 
     def _introspect_fields(self, model_name: str) -> Dict:
@@ -193,7 +192,7 @@ class OdooQuery:
 
     def select(self, select_func) -> "OdooQuery":
         """Apply a projection."""
-        proxy = ModelProxy(self.fields, self, collect_accesses=False)
+        proxy = ModelProxy(self.fields, self)
         result = select_func(proxy)
 
         def collect_projections(res) -> List[FieldProxy]:
@@ -213,14 +212,14 @@ class OdooQuery:
 
     def filter(self, filter_func) -> "OdooQuery":
         """Apply filter conditions using a lambda function."""
-        proxy = ModelProxy(self.fields, self, collect_accesses=True)
+        proxy = ModelProxy(self.fields, self)
         filter_func(proxy)
         self.filters.extend(proxy.conditions)
         return self
 
     def order_by(self, order_func, descending: bool = False) -> "OdooQuery":
         """Apply ordering on fields."""
-        proxy = ModelProxy(self.fields, self, collect_accesses=False)
+        proxy = ModelProxy(self.fields, self)
         result = order_func(proxy)
 
         def collect_fields(res) -> List[FieldProxy]:
