@@ -47,7 +47,7 @@ class FieldProxy:
         if field_def.get("type") in {"many2one", "one2many", "many2many"}:
             relation = field_def.get("relation")
             if not relation:
-                raise AttributeError(f"'{self.field_name}' has no attributes. Remove '.{attr}'")
+                raise AttributeError(f"'{self.field_name}' has no relation. This indicates an issue with your odoo database, contact your odoo administrator.")
 
             related_fields = self.model.query.orm.fields_cache.setdefault(
                 relation, self.model.query.orm._introspect_fields(relation)
@@ -71,10 +71,7 @@ class FieldProxy:
                 export_field_path=f"{self.export_field_path}/{attr}",
             )
         else:
-            raise AttributeError(
-                f"Field '{self.field_name}' is not a relational field and has no attribute '{attr}'."
-            )
-
+            raise AttributeError(f"'{self.field_name}' has no attributes. Remove '.{attr}'")
 
 
     def __eq__(self, other: Any) -> "ModelProxy":
