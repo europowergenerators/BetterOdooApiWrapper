@@ -165,18 +165,7 @@ class Client:
     def set_context(self, **kwargs):
         """Set the context for subsequent queries."""
         self.context.update(kwargs)
-    
-    def close(self):
-        """Close the ServerProxy connections."""
-        if self.common_proxy:
-            self.common_proxy("close") if hasattr(self.common_proxy, "close") else None
-            self.common_proxy = None
-        if self.object_proxy:
-            self.object_proxy("close") if hasattr(self.object_proxy, "close") else None
-            self.object_proxy = None
-
-    def __exit__(self):
-        self.close()
+        
 
 class OdooQuery:
     def __init__(self, orm: Client, model_name: str):
