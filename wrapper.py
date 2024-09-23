@@ -38,9 +38,9 @@ class FieldProxy:
         """Handle attribute access for relational fields."""
         field_def = self.fields.get(self.field_name)
         if not field_def:
-            closest_match = difflib.get_close_matches(self.field_name, self.fields.keys(), n=1)
-            if closest_match:
-                raise AttributeError(f"Field '{self.field_name}' not found. Did you mean '{closest_match[0]}'?")
+            closest_matches = difflib.get_close_matches(self.field_name, self.fields.keys())
+            if closest_matches:
+                raise AttributeError(f"Field '{self.field_name}' not found. Try one of the following '{','.join(closest_matches)}'")
             else:
                 raise AttributeError(f"Field '{self.field_name}' not found.")
 
@@ -55,9 +55,9 @@ class FieldProxy:
 
             # Allow 'id' and 'external_id' even if they are not in related_fields
             if attr not in related_fields and attr not in {"id", "external_id"}:
-                closest_match = difflib.get_close_matches(attr, related_fields.keys(), n=1)
-                if closest_match:
-                    raise AttributeError(f"Field '{attr}' not found in '{relation}'. Did you mean '{closest_match[0]}'?")
+                closest_matches = difflib.get_close_matches(attr, related_fields.keys())
+                if closest_matches:
+                    raise AttributeError(f"Field '{attr}' not found in '{relation}'. Try one of the following '{','.join(closest_matches)}'")
                 else:
                     raise AttributeError(f"Field '{attr}' not found in '{relation}'")
 
@@ -130,9 +130,9 @@ class ModelProxy:
                 export_field_path=item,
             )
         else:
-            closest_match = difflib.get_close_matches(item, self.fields.keys(), n=1)
-            if closest_match:
-                raise AttributeError(f"Field '{item}' not found. Did you mean '{closest_match[0]}'?")
+            closest_matches = difflib.get_close_matches(item, self.fields.keys())
+            if closest_matches:
+                raise AttributeError(f"Field '{item}' not found. Try one of the following '{','.join(closest_matches)}'")
             else:
                 raise AttributeError(f"Field '{item}' not found.")
 
