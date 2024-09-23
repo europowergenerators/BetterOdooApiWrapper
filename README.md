@@ -1,7 +1,3 @@
-Apologies for the confusion. Here's the `README.md` in proper markdown format for you to copy and paste:
-
----
-
 # BetterOdooApiWrapper
 
 A minimal Python ORM wrapper for the Odoo API.
@@ -64,7 +60,7 @@ partners = partners.select(lambda p: (p.name, p.email))
 
 ```python
 # Filter partners where name contains 'John' and email is not null
-partners = partners.filter(lambda p: (p.name.ilike('John'), p.email != False))
+partners = partners.filter(lambda p: ('John' in p.name, p.email != False))
 ```
 
 ### Ordering Results
@@ -113,6 +109,8 @@ results = partners.get()
 ## Exporting Data
 
 Use the `export` method to fetch data using Odoo's `export_data` method, which is efficient for large datasets.
+> [!WARNING] 
+> This implicitly creates external_ids for all returned records, including requested related records.
 
 ```python
 # Export data including nested relational fields
@@ -173,36 +171,25 @@ for partner in results:
     print(f"Country: {partner['company_id']['country_id']['name']}")
 ```
 
-## Closing the Connection
 
-Always close the client connection when done:
+## Roadmap
+- Fix no filter returning only ID on get
+- Cache Field introspection
+- Generate python stub files from field introspection to introduce "dynamic" code completion
+- Add Read Pagination support with easy itterations
+- Add support for Delete
+- Add support for Write
+- Add support for Update
 
-```python
-odoo.close()
-```
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Commit your changes with clear messages.
-4. Submit a pull request.
-
-## Issues
-
-If you encounter any issues or have suggestions, please open an issue on GitHub.
-
+We are not open to pull requests. Create an issue to discuss pain points in the wrapper.
 
 ## Disclaimer
 
 This project is not affiliated with or endorsed by Odoo S.A. It is an independent tool designed to facilitate interaction with the Odoo API.
 
-## Acknowledgments
-
-- [Odoo S.A.](https://www.odoo.com/) for their powerful open-source ERP platform.
-- The open-source community for continuous support and contributions.
 
 ---
 
