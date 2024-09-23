@@ -47,7 +47,7 @@ class FieldProxy:
         if field_def.get("type") in {"many2one", "one2many", "many2many"}:
             relation = field_def.get("relation")
             if not relation:
-                raise AttributeError(f"No relation found for field '{self.field_name}'.")
+                raise AttributeError(f"'{self.field_name}' has no attributes. Remove '.{attr}'")
 
             related_fields = self.model.query.orm.fields_cache.setdefault(
                 relation, self.model.query.orm._introspect_fields(relation)
