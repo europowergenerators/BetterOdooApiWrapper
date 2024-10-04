@@ -38,26 +38,26 @@ class FieldProxy:
         """Handle attribute access for relational fields."""
         field_def = self.fields.get(self.field_name)
         if not field_def:
-            closest_match = difflib.get_close_matches(self.field_name, self.fields.keys(), n=1)
-            if closest_match:
-                raise AttributeError(f"Field '{self.field_name}' not found. Did you mean '{closest_match[0]}'?")
+            closest_matches = difflib.get_close_matches(self.field_name, self.fields.keys())
+            if closest_matches:
+                raise AttributeError(f"Field '{self.field_name}' not found. Try one of the following '{','.join(closest_matches)}'")
             else:
                 raise AttributeError(f"Field '{self.field_name}' not found.")
 
         if field_def.get("type") in {"many2one", "one2many", "many2many"}:
             relation = field_def.get("relation")
             if not relation:
-                raise AttributeError(f"No relation found for field '{self.field_name}'.")
+                raise AttributeError(f"'{self.field_name}' has no relation. This indicates an issue with your odoo database, contact your odoo administrator.")
 
-            related_fields = self.model.query.orm.fields_cache.setdefault(
-                relation, self.model.query.orm._introspect_fields(relation)
-            )
+            if relation not in self.model.query.orm.fields_cache:
+                self.model.query.orm.fields_cache[relation] = self.model.query.orm._introspect_fields(relation)
+            related_fields = self.model.query.orm.fields_cache[relation]
 
             # Allow 'id' and 'external_id' even if they are not in related_fields
             if attr not in related_fields and attr not in {"id", "external_id"}:
-                closest_match = difflib.get_close_matches(attr, related_fields.keys(), n=1)
-                if closest_match:
-                    raise AttributeError(f"Field '{attr}' not found in '{relation}'. Did you mean '{closest_match[0]}'?")
+                closest_matches = difflib.get_close_matches(attr, related_fields.keys())
+                if closest_matches:
+                    raise AttributeError(f"Field '{attr}' not found in '{relation}'. Try one of the following '{','.join(closest_matches)}'")
                 else:
                     raise AttributeError(f"Field '{attr}' not found in '{relation}'")
 
@@ -71,56 +71,44 @@ class FieldProxy:
                 export_field_path=f"{self.export_field_path}/{attr}",
             )
         else:
-            raise AttributeError(
-                f"Field '{self.field_name}' is not a relational field and has no attribute '{attr}'."
-            )
+            raise AttributeError(f"'{self.field_name}' has no attributes. Remove '.{attr}'")
 
 
-
-    def __eq__(self, other: Any) -> "ModelProxy":
+    def __eq__(self, other: Any):
         self.model._register_condition((self.field_path, "=", other))
-        return self.model
-
-    def __ne__(self, other: Any) -> "ModelProxy":
+        
+    def __ne__(self, other: Any):
         self.model._register_condition((self.field_path, "!=", other))
-        return self.model
 
-    def __contains__(self, other: Any) -> "ModelProxy":
+    def __contains__(self, other: Any):
         operator = "ilike" if isinstance(other, str) else "in"
         value = other if isinstance(other, str) else ([other] if not isinstance(other, list) else other)
         self.model._register_condition((self.field_path, operator, value))
-        return self.model
 
-    def __lt__(self, other: Any) -> "ModelProxy":
+    def __lt__(self, other: Any):
         self.model._register_condition((self.field_path, "<", other))
-        return self.model
 
-    def __le__(self, other: Any) -> "ModelProxy":
+    def __le__(self, other: Any):
         self.model._register_condition((self.field_path, "<=", other))
-        return self.model
 
-    def __gt__(self, other: Any) -> "ModelProxy":
+    def __gt__(self, other: Any):
         self.model._register_condition((self.field_path, ">", other))
-        return self.model
 
-    def __ge__(self, other: Any) -> "ModelProxy":
+    def __ge__(self, other: Any):
         self.model._register_condition((self.field_path, ">=", other))
-        return self.model
 
 
 class ModelProxy:
-    def __init__(self, fields: Dict, query: "OdooQuery", collect_accesses: bool = False):
+    def __init__(self, fields: Dict, query: "OdooQuery"):
         self.fields = fields
         self.query = query
         self.conditions = []
         self.accesses = []
-        self.collect_accesses = collect_accesses
 
     def __getattr__(self, item: str) -> FieldProxy:
         """Handle attribute access to dynamically return a FieldProxy."""
         if item in self.fields or item in {"id", "external_id"}:
-            if self.collect_accesses:
-                self.accesses.append(item)
+            self.accesses.append(item)
 
             return FieldProxy(
                 field_name=item,
@@ -130,9 +118,9 @@ class ModelProxy:
                 export_field_path=item,
             )
         else:
-            closest_match = difflib.get_close_matches(item, self.fields.keys(), n=1)
-            if closest_match:
-                raise AttributeError(f"Field '{item}' not found. Did you mean '{closest_match[0]}'?")
+            closest_matches = difflib.get_close_matches(item, self.fields.keys())
+            if closest_matches:
+                raise AttributeError(f"Field '{item}' not found. Try one of the following '{','.join(closest_matches)}'")
             else:
                 raise AttributeError(f"Field '{item}' not found.")
 
@@ -158,7 +146,8 @@ class Client:
         return self.common_proxy.authenticate(self.db, self.username, self.password, {})
 
     def __getitem__(self, model_name: str) -> "OdooQuery":
-        self.fields_cache.setdefault(model_name, self._introspect_fields(model_name))
+        if model_name not in self.fields_cache:
+            self.fields_cache[model_name] = self._introspect_fields(model_name)
         return OdooQuery(self, model_name)
 
     def _introspect_fields(self, model_name: str) -> Dict:
@@ -176,18 +165,7 @@ class Client:
     def set_context(self, **kwargs):
         """Set the context for subsequent queries."""
         self.context.update(kwargs)
-    
-    def close(self):
-        """Close the ServerProxy connections."""
-        if self.common_proxy:
-            self.common_proxy("close") if hasattr(self.common_proxy, "close") else None
-            self.common_proxy = None
-        if self.object_proxy:
-            self.object_proxy("close") if hasattr(self.object_proxy, "close") else None
-            self.object_proxy = None
-
-    def __exit__(self):
-        self.close()
+        
 
 class OdooQuery:
     def __init__(self, orm: Client, model_name: str):
@@ -203,7 +181,7 @@ class OdooQuery:
 
     def select(self, select_func) -> "OdooQuery":
         """Apply a projection."""
-        proxy = ModelProxy(self.fields, self, collect_accesses=False)
+        proxy = ModelProxy(self.fields, self)
         result = select_func(proxy)
 
         def collect_projections(res) -> List[FieldProxy]:
@@ -223,14 +201,14 @@ class OdooQuery:
 
     def filter(self, filter_func) -> "OdooQuery":
         """Apply filter conditions using a lambda function."""
-        proxy = ModelProxy(self.fields, self, collect_accesses=True)
+        proxy = ModelProxy(self.fields, self)
         filter_func(proxy)
         self.filters.extend(proxy.conditions)
         return self
 
     def order_by(self, order_func, descending: bool = False) -> "OdooQuery":
         """Apply ordering on fields."""
-        proxy = ModelProxy(self.fields, self, collect_accesses=False)
+        proxy = ModelProxy(self.fields, self)
         result = order_func(proxy)
 
         def collect_fields(res) -> List[FieldProxy]:
