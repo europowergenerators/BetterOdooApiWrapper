@@ -171,6 +171,17 @@ for partner in results:
     print(f"Country: {partner['company_id']['country_id']['name']}")
 ```
 
+## Creating Records
+You can create single or bulk records in odoo by supplying a list of key: value dictionaries.
+
+```python
+created_record = partners.create([{"name": "James Smith"}]).select(lambda x: x.name).get()
+```
+or simply
+```python
+created_ids = partners.create([{"name": "James Smith"}]).ids
+```
+
 
 ## Roadmap
 - Fix no filter returning only ID on get
