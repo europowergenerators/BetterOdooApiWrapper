@@ -182,6 +182,16 @@ or simply
 created_ids = partners.create([{"name": "James Smith"}]).ids
 ```
 
+## Deleting Records
+Deleting records can be done in 3 ways.
+You can either specify external_ids, database_ids, or use a filter like with search.
+
+```python
+partners.database_ids([1, 2, 3]).delete()
+partners.external_ids(["external_id_1", "external_id_2"]).delete()
+partners.filter(lambda x: x.name == "John Doe").delete()
+```
+
 
 ## Roadmap
 - Fix no filter returning only ID on get
