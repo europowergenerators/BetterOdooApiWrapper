@@ -176,7 +176,7 @@ class OdooQuery:
         self.order: List[tuple] = []
         self.limit = None
         self.fields = orm.fields_cache[model_name]
-        self.ids = None
+        self.ids = []
         self.context = orm.context.copy()
 
     def select(self, select_func) -> "OdooQuery":
@@ -243,22 +243,61 @@ class OdooQuery:
             [domain],
             {"fields": ["res_id"], "context": self.context},
         )
-        self.ids = [record["res_id"] for record in ir_model_data]
+        self.ids.extend([record["res_id"] for record in ir_model_data])
         return self
 
     def _prepare_domain(self) -> List[tuple]:
         domain = self.filters.copy()
-        if self.ids is not None:
-            if not self.ids:
-                return []  # Return empty domain if ids list is empty
+        if self.ids:
             domain.append(("id", "in", self.ids))
         return domain
+        
 
     def _prepare_fields(self) -> List[str]:
         return list(set(fp.field_path for fp in self.projections)) if self.projections else []
 
     def _prepare_order(self) -> str:
         return ", ".join(f"{field} {direction}" for field, direction in self.order) if self.order else ""
+
+    def _extract_keys_from_list_of_dicts(self, list_of_dicts):
+            keys = set()
+            for dict in list_of_dicts:
+                keys.update(dict.keys())
+
+            return list(keys)
+    
+    def create(self, list_of_objects) -> List[int]:
+        # Perform a check to see if all mandatory items are fulfilled
+        # Field introspection cannot be used to check the required fields. because odoo enforces business logic at different levels.
+
+        if type(list_of_objects) != list:
+            raise TypeError
+        
+        keys = self._extract_keys_from_list_of_dicts(list_of_objects)
+        missing_keys = [key for key in keys if key not in self.fields]
+        if missing_keys:
+            error_string = f"Some fields have not been found on the model '{self.model_name}':\n"
+            for key in missing_keys:
+                closest_matches = difflib.get_close_matches(key, self.fields.keys())
+                if closest_matches:
+                    error_string = error_string + f"- '{key}'. Perhaps you meant: '{','.join(closest_matches)}'\n"
+                else:
+                    error_string = error_string + f"- '{key}'.\n"
+            raise AttributeError(error_string)
+
+
+        ids = self.orm.object_proxy.execute_kw(
+            self.orm.db,
+            self.orm.uid,
+            self.orm.password,
+            self.model_name,
+            'create',
+            [list_of_objects],
+        )
+        if type(ids) == int:
+            ids = [ids]
+        self.ids.extend(ids)
+        return self
 
     def get(self) -> List[Dict]:
         """Execute the query by manually fetching nested relational data."""
