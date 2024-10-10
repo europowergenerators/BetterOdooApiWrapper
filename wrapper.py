@@ -303,6 +303,27 @@ class OdooQuery:
         self.ids.extend(ids)
         return self
 
+    def delete(self):
+        """
+        Deletes specified records in the odoo database
+        Can be used with
+        - a search domain
+        - specifying ids
+        """
+        result_set = self.get()
+        result_ids = [result["id"] for result in result_set]
+        combined_ids = result_ids + self.ids
+        if combined_ids:
+            self.orm.object_proxy.execute_kw(
+                self.orm.db,
+                self.orm.uid,
+                self.orm.password,
+                self.model_name,
+                'unlink',
+                [combined_ids],
+            )
+        return True
+
     def get(self) -> List[Dict]:
         """Execute the query by manually fetching nested relational data."""
         domain = self._prepare_domain()
