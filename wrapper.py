@@ -2,6 +2,23 @@ import xmlrpc.client
 from typing import Any, Dict, List
 import difflib
 
+odoo_type_mapping = {
+    "many2one": int,
+    "one2many": List[int],
+    "many2many": List[int],
+    "date": str,
+    "selection": str,
+    "char": str,
+    "integer": int,
+    "text": str,
+    "float": float,
+    "monetary": float,
+    "html": str,
+    "datetime": str,
+    "boolean": bool,
+    "binary": str
+}
+
 def set_nested_value(data_dict: Dict, field_path: str, value: Any):
     """Set a value in a nested dictionary given a field path (with slashes)."""
     keys = field_path.split("/")
@@ -322,6 +339,52 @@ class OdooQuery:
                 'unlink',
                 [combined_ids],
             )
+        return True
+
+    def update(self, update_dictionary):
+        """Update Ids or a domain with new values specified in the dictionary"""
+        missing_keys = [key for key in update_dictionary.keys() if key not in self.fields]
+        if missing_keys:
+            error_string = f"Some fields have not been found on the model '{self.model_name}':\n"
+            for key in missing_keys:
+                closest_matches = difflib.get_close_matches(key, self.fields.keys())
+                if closest_matches:
+                    error_string = error_string + f"- '{key}'. Perhaps you meant: '{','.join(closest_matches)}'\n"
+                else:
+                    error_string = error_string + f"- '{key}'.\n"
+            raise AttributeError(error_string)
+        
+        # Loop thru all the key, value pairs and check if the value type is correct based on the type in the introspection
+        def _validate_input_types(dictionary):
+            has_error = False
+            error_string = "One or more of the values you have supplied are not correct:\n"
+            for key, value in dictionary.items():
+                if type(value) != odoo_type_mapping[self.fields[key]["type"]]:
+                    if not has_error:
+                        has_error = True
+                    error_string += f"- {key}: Supplied: {type(value)} | Expected: {odoo_type_mapping[self.fields[key]['type']]}\n"
+            return has_error, error_string
+        
+        has_error, error_string = _validate_input_types(update_dictionary)
+        if has_error:
+            raise ValueError(error_string)
+        
+        result_set = self.get()
+        result_ids = [result["id"] for result in result_set]
+        combined_ids = result_ids + self.ids
+        if combined_ids:
+            self.orm.object_proxy.execute_kw(
+                self.orm.db,
+                self.orm.uid,
+                self.orm.password,
+                self.model_name,
+                "write",
+                [
+                    combined_ids,
+                    update_dictionary
+                ]
+            )
+            
         return True
 
     def get(self) -> List[Dict]:
