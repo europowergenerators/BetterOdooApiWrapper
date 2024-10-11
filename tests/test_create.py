@@ -1,7 +1,7 @@
 import xmlrpc.client
 from .test_setup import BaseTestCase
 import xmlrpc
-class TestGet(BaseTestCase):
+class TestCreate(BaseTestCase):
 
     def test_create_correct(self):
         result = self.query.create([{"name": "[API TEST] - James Smith"}]).select(lambda x: x.id).get()
