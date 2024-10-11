@@ -230,6 +230,10 @@ class OdooQuery:
         """Apply descending order on a field."""
         return self.order_by(order_func, descending=True)
 
+    def database_ids(self, database_ids_list: List[int]) -> "OdooQuery":
+        self.ids.extend(database_ids_list)
+        return self
+
     def external_ids(self, external_ids_list: List[str]) -> "OdooQuery":
         """Filter records by their external IDs."""
         names = [eid.split(".", 1)[1] for eid in external_ids_list]
