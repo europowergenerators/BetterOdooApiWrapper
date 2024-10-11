@@ -28,5 +28,11 @@ class BaseTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.client = Client(ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASS)
 
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.client['hr.employee'].filter(lambda x: "[API TEST]" in x.name ).delete()
+        return super().tearDownClass()
+    
     def setUp(self):
         self.query = self.client['hr.employee']
