@@ -1,5 +1,5 @@
 import xmlrpc.client
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Generator, Union
 import difflib
 
 odoo_type_mapping = {
@@ -192,6 +192,7 @@ class OdooQuery:
         self.filters: List[tuple] = []
         self.order: List[tuple] = []
         self.limit = None
+        self._per_page = None
         self.fields = orm.fields_cache[model_name]
         self.ids = []
         self.context = orm.context.copy()
@@ -387,8 +388,11 @@ class OdooQuery:
             
         return True
 
-    def get(self) -> List[Dict]:
-        """Execute the query by manually fetching nested relational data."""
+
+    def get(self) -> Union[Generator[Dict, None, None], List[Dict]]:
+        """Execute the query by manually fetching nested relational data, 
+        with pagination support if _per_page is specified."""
+        
         domain = self._prepare_domain()
 
         # Build a nested structure of fields to fetch
@@ -470,25 +474,64 @@ class OdooQuery:
 
             return records_by_id
 
-        # Fetch main record IDs
-        main_ids = self.orm.object_proxy.execute_kw(
-            self.orm.db,
-            self.orm.uid,
-            self.orm.password,
-            self.model_name,
-            'search',
-            [domain],
-            {'limit': self.limit, 'order': self._prepare_order(), 'context': self.context}
-        )
+        def paginated_fetch() -> Generator[Dict, None, None]:
+            """Paginate results by _per_page and yield records."""
+            offset = 0
+            while True:
+                if self.limit and offset + self._per_page > self.limit:
+                    limit = self.limit - offset 
+                else:
+                    limit = self._per_page
+                # Fetch the next batch of IDs
+                ids = self.orm.object_proxy.execute_kw(
+                    self.orm.db,
+                    self.orm.uid,
+                    self.orm.password,
+                    self.model_name,
+                    'search',
+                    [domain],
+                    {'limit': limit, 'offset': offset, 'order': self._prepare_order(), 'context': self.context}
+                )
+                if not ids:
+                    break
+                
+                # Fetch the corresponding records
+                records_by_id = fetch_records(self.model_name, ids, nested_fields)
 
-        if not main_ids:
-            return []
+                # Yield records
+                yield [records_by_id[record_id] for record_id in ids]
+                
+                if self.limit and offset + self._per_page > self.limit:
+                    break
 
-        # Fetch records with nested fields
-        records_by_id = fetch_records(self.model_name, main_ids, nested_fields)
+                # Move to the next page
+                offset += self._per_page
 
-        # Return records as a list, preserving order
-        return [records_by_id[record_id] for record_id in main_ids]
+        # Check if pagination is required
+        if self._per_page:
+            # Return a generator for paginated results
+            return paginated_fetch()
+        else:
+            # Fetch all records at once
+            main_ids = self.orm.object_proxy.execute_kw(
+                self.orm.db,
+                self.orm.uid,
+                self.orm.password,
+                self.model_name,
+                'search',
+                [domain],
+                {'limit': self.limit, 'order': self._prepare_order(), 'context': self.context}
+            )
+
+            if not main_ids:
+                return []
+
+            # Fetch records with nested fields
+            records_by_id = fetch_records(self.model_name, main_ids, nested_fields)
+
+            # Return records as a list, preserving order
+            return [records_by_id[record_id] for record_id in main_ids]
+
 
     def export(self) -> List[Dict]:
         """Execute the query using export_data."""
@@ -538,6 +581,10 @@ class OdooQuery:
     def take(self, limit: int) -> "OdooQuery":
         """Set a limit on the number of records to fetch."""
         self.limit = limit
+        return self
+
+    def per(self, per_page: int) -> "OdooQuery":
+        self._per_page = per_page
         return self
 
     def first(self) -> Dict:
