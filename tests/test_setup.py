@@ -36,3 +36,6 @@ class BaseTestCase(unittest.TestCase):
     
     def setUp(self):
         self.query = self.client['hr.employee']
+
+    def tearDown(self):
+        self.client['hr.employee'].filter(lambda x: "[API TEST]" in x.name ).delete()
