@@ -1,6 +1,6 @@
 # test_setup.py
 import unittest
-from BetterOdooApiWrapper.wrapper import Client
+from BetterOdooApiWrapper import Client
 import os
 from dotenv import load_dotenv
 
