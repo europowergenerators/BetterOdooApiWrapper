@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "BetterOdooApiWrapper"
+version = "0.1.0"
+description = "A minimal Python ORM wrapper for the Odoo API."
+authors = [
+    {name = "Kyan Machiels", email = "kyan.machiels@e-powerinternational.com"},
+    {name = "Bert Proesmans", email = "bert.proesmans@e-powerinternational.com"}
+]
+dependencies = []
+requires-python = ">=3.5"
+license = {text = "MIT"}
+
+[project.urls]
+homepage = "https://github.com/europowergenerators/BetterOdooApiWrapper"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["BetterOdooApiWrapper*"]  # package names should match these glob patterns (["*"] by default)
+exclude = []  # exclude packages matching these glob patterns (empty by default)
+namespaces = true  # to disable scanning PEP 420 namespaces (true by default)
