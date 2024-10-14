@@ -17,6 +17,8 @@ license = {text = "MIT"}
 
 [project.urls]
 homepage = "https://github.com/europowergenerators/BetterOdooApiWrapper"
+Documentation = "https://github.com/europowergenerators/BetterOdooApiWrapper"
+"Issue tracker" = "https://github.com/europowergenerators/BetterOdooApiWrapper/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
