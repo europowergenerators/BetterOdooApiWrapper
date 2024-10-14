@@ -17,10 +17,16 @@ BetterOdooApiWrapper is a lightweight, Pythonic wrapper around the Odoo XML-RPC 
 
 ## Getting Started
 
+### Instalation
+Install the module using PyPI
+```bash
+pip install BetterOdooApiWrapper
+```
+
 ### Connecting to Odoo
 
 ```python
-from wrapper import Client
+from BetterOdooApiWrapper import Client
 
 # Initialize the Odoo client
 odoo = Client(
@@ -128,7 +134,7 @@ results = partners.get()
 ## Full Example
 
 ```python
-from odoopyorm import Client
+from BetterOdooApiWrapper import Client
 
 # Initialize the client
 odoo = Client(
