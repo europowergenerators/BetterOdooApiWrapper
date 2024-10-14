@@ -10,6 +10,8 @@ on:
 
 jobs:
   test:
+    name: >- # Name used in protected branch rule required status check 
+      Python test
     runs-on: ubuntu-latest
 
     steps:
