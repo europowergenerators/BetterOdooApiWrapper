@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "BetterOdooApiWrapper"
-version = "0.1.0"
+version = "0.1.1"
 description = "A minimal Python ORM wrapper for the Odoo API."
 readme = "README.md"
 authors = [
